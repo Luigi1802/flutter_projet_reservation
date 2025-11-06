@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
 class MenuPage extends StatefulWidget {
-  const MenuPage({super.key, required this.title});
-
-  final String title;
+  const MenuPage({super.key});
 
   @override
   State<MenuPage> createState() => _MenuPageState();
@@ -21,7 +19,7 @@ class _MenuPageState extends State<MenuPage> {
 
   // Catégorie sélectionnée
   // Entrées par défaut
-  String selectedCategory = "Entrées";
+  String selectedCategory = "Formules";
 
   // Données de plats codées en dur
   final Map<String, List<Map<String, dynamic>>> menu = {
@@ -105,6 +103,8 @@ class _MenuPageState extends State<MenuPage> {
       appBar: AppBar(
         title: const Text("Menu"),
         centerTitle: true,
+        backgroundColor: Colors.redAccent,
+        foregroundColor: Colors.white,
       ),
       body: Column(
         children: [

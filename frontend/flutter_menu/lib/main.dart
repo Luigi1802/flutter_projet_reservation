@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_menu/menu.dart';
 
+import 'main_page.dart';
+
 void main() {
   runApp(const PeppeApp());
 }
@@ -17,7 +19,7 @@ class PeppeApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.redAccent),
       ),
-      home: const MenuPage(title: 'Menu principal'),
+      home: const MainPage(),
     );
   }
 }
