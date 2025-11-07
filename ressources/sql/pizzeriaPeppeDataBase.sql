@@ -76,9 +76,9 @@ INSERT INTO slot (slotValue) VALUES
 
 -- Table User
 INSERT INTO user (pseudo, email, passwordUser, idRole) VALUES
-('admin', 'aaa@aaa.fr', 'aaa', 1),
-('client2', 'ccc@ccc.fr', 'ccc', 2),
-('client3', 'ddd@ddd.fr', 'ddd', 2);
+('restaurateur', 'admin@peppe.fr', 'admin', 1),
+('luigi', 'luigi.a@gmail.com', 'luigi', 2),
+('ph', 'ph.d@gmail.com', 'ph', 2);
 
 -- Table Reservation
 INSERT INTO reservation (dateReservation, idSlot, nbPers, idStatus, message, idUser) VALUES
