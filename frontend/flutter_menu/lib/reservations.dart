@@ -28,10 +28,10 @@ class Slot {
 
 class Reservation {
   final int idResa;
-  final String dateReservation; // "dd/MM/yyyy"
+  final String dateReservation;
   final String slotValue;
   final int nbPers;
-  String status; // "En attente", "Confirmée", "Annulée"
+  String status;
   final String message;
   final String pseudo;
 
@@ -47,8 +47,7 @@ class Reservation {
 
   factory Reservation.fromJson(Map<String, dynamic> json) {
     final dateParts = (json['dateReservation'] as String).split('-');
-    final formattedDate =
-        "${dateParts[2]}/${dateParts[1]}/${dateParts[0]}";
+    final formattedDate = "${dateParts[2]}/${dateParts[1]}/${dateParts[0]}";
 
     return Reservation(
       idResa: json['idResa'],
@@ -64,15 +63,17 @@ class Reservation {
 
 // --- Page principale ---
 class ReservationsPage extends StatefulWidget {
-  final String role; // "client" ou "hote"
+  final int idRole; // "client" ou "hote"
   final String clientName;
   final int clientId;
+  final String token;
 
   const ReservationsPage({
     super.key,
-    required this.role,
+    required this.idRole,
     required this.clientName,
     required this.clientId,
+    required this.token, // <--- passage du token
   });
 
   @override
@@ -83,7 +84,6 @@ class _ReservationsPageState extends State<ReservationsPage> {
   List<Reservation> _allReservations = [];
   List<Slot> _slots = [];
 
-  // Création d'une réservation
   DateTime? _selectedDate;
   Slot? _selectedSlot;
   int _guests = 2;
@@ -98,31 +98,26 @@ class _ReservationsPageState extends State<ReservationsPage> {
     _fetchReservations();
   }
 
-  // --- Fonction pour obtenir l'icône du statut ---
+  // --- Icône du statut ---
   Icon _buildStatusIcon(String status) {
     switch (status.toLowerCase()) {
       case 'confirmée':
         return const Icon(Icons.check_circle, color: Colors.green, size: 18);
       case 'refusé':
-        return const Icon(Icons.cancel, color: Colors.red, size: 18);
       case 'annulée':
         return const Icon(Icons.cancel, color: Colors.red, size: 18);
-      case 'en attente':
       default:
         return const Icon(Icons.access_time, color: Colors.orange, size: 18);
     }
   }
 
-  // --- Fonction pour la couleur du texte du statut ---
   Color _statusColor(String status) {
     switch (status.toLowerCase()) {
       case 'confirmée':
         return Colors.green;
       case 'refusé':
-        return Colors.red;
       case 'annulée':
         return Colors.red;
-      case 'en attente':
       default:
         return Colors.orange;
     }
@@ -133,15 +128,18 @@ class _ReservationsPageState extends State<ReservationsPage> {
     setState(() => _isLoadingReservations = true);
 
     try {
-      String baseUrl = "http://localhost:8000";
-
-      final url = widget.role == "hote"
+      const baseUrl = "http://localhost:8000";
+      final url = widget.idRole == 1
           ? Uri.parse("$baseUrl/reservation/getAll")
           : Uri.parse("$baseUrl/reservation/getAll/${widget.clientId}");
 
-      final response = await http.get(url, headers: {
-        'Content-Type': 'application/json',
-      });
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}', // <--- ajout du Bearer ici
+        },
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -152,16 +150,12 @@ class _ReservationsPageState extends State<ReservationsPage> {
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  "Erreur ${response.statusCode} lors de la récupération des réservations.")),
+          SnackBar(content: Text("Erreur ${response.statusCode} lors de la récupération des réservations.")),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(
-                "Erreur lors de la récupération des réservations: $e\n")),
+        SnackBar(content: Text("Erreur lors de la récupération des réservations: $e")),
       );
     } finally {
       setState(() => _isLoadingReservations = false);
@@ -173,7 +167,13 @@ class _ReservationsPageState extends State<ReservationsPage> {
     setState(() => _isLoadingSlots = true);
     try {
       final url = Uri.parse("http://localhost:8000/planning/reservations/$dateKey");
-      final response = await http.get(url, headers: {'Content-Type': 'application/json'});
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}', // <--- Bearer ajouté
+        },
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -196,10 +196,9 @@ class _ReservationsPageState extends State<ReservationsPage> {
     }
   }
 
-  // --- Mettre à jour le statut d'une réservation ---
+  // --- Mise à jour du statut ---
   Future<void> _updateStatus(Reservation resa, bool confirm) async {
     setState(() => _isSubmitting = true);
-
     try {
       final url = Uri.parse("http://localhost:8000/reservation/manage");
       final body = json.encode({
@@ -207,7 +206,14 @@ class _ReservationsPageState extends State<ReservationsPage> {
         "confirm": confirm,
       });
 
-      final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: body);
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}', // <--- Bearer ajouté
+        },
+        body: body,
+      );
 
       if (response.statusCode == 200) {
         await _fetchReservations();
@@ -230,25 +236,30 @@ class _ReservationsPageState extends State<ReservationsPage> {
     if (_selectedDate == null || _selectedSlot == null) return;
 
     setState(() => _isSubmitting = true);
-
     try {
       final url = Uri.parse("http://localhost:8000/planning/book");
       final body = json.encode({
-        "dateReservation": "${_selectedDate!.year.toString().padLeft(4,'0')}-"
-            "${_selectedDate!.month.toString().padLeft(2,'0')}-"
-            "${_selectedDate!.day.toString().padLeft(2,'0')}",
+        "dateReservation":
+        "${_selectedDate!.year.toString().padLeft(4, '0')}-"
+            "${_selectedDate!.month.toString().padLeft(2, '0')}-"
+            "${_selectedDate!.day.toString().padLeft(2, '0')}",
         "idSlot": _selectedSlot!.idSlot,
         "nbPers": _guests,
         "message": _noteController.text,
         "idUser": widget.clientId,
       });
 
-      final response = await http.post(url,
-          headers: {'Content-Type': 'application/json'}, body: body);
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}', // <--- Bearer ajouté
+        },
+        body: body,
+      );
 
       if (response.statusCode == 201) {
         await _fetchReservations();
-
         setState(() {
           _selectedDate = null;
           _selectedSlot = null;
@@ -256,7 +267,6 @@ class _ReservationsPageState extends State<ReservationsPage> {
           _noteController.clear();
           _slots = [];
         });
-
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Réservation créée avec succès !")),
         );
@@ -286,15 +296,16 @@ class _ReservationsPageState extends State<ReservationsPage> {
 
     if (picked != null) {
       setState(() => _selectedDate = picked);
-      final key = "${picked.year.toString().padLeft(4,'0')}-"
-          "${picked.month.toString().padLeft(2,'0')}-"
-          "${picked.day.toString().padLeft(2,'0')}";
+      final key =
+          "${picked.year.toString().padLeft(4, '0')}-"
+          "${picked.month.toString().padLeft(2, '0')}-"
+          "${picked.day.toString().padLeft(2, '0')}";
       await _fetchSlots(key);
     }
   }
 
   String _formatDate(DateTime date) =>
-      "${date.day.toString().padLeft(2,'0')}/${date.month.toString().padLeft(2,'0')}/${date.year}";
+      "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
 
   List<Reservation> get _reservationsFiltered => _allReservations;
 
@@ -328,11 +339,11 @@ class _ReservationsPageState extends State<ReservationsPage> {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (widget.role == "hote")
+                          if (widget.idRole == 1)
                             Text("Client : ${resa.pseudo}"),
                           if (resa.message.isNotEmpty)
                             Text("Note : ${resa.message}"),
-                            SizedBox(height: 6),
+                          const SizedBox(height: 6),
                           Row(
                             children: [
                               _buildStatusIcon(resa.status),
@@ -348,8 +359,9 @@ class _ReservationsPageState extends State<ReservationsPage> {
                           ),
                         ],
                       ),
-                      trailing: widget.role == "hote" &&
-                          resa.status.toLowerCase() == "en attente"
+                      trailing: widget.idRole == 1 &&
+                          resa.status.toLowerCase() ==
+                              "en attente"
                           ? Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -358,16 +370,14 @@ class _ReservationsPageState extends State<ReservationsPage> {
                                 color: Colors.green),
                             onPressed: _isSubmitting
                                 ? null
-                                : () =>
-                                _updateStatus(resa, true),
+                                : () => _updateStatus(resa, true),
                           ),
                           IconButton(
                             icon: const Icon(Icons.close,
                                 color: Colors.red),
                             onPressed: _isSubmitting
                                 ? null
-                                : () =>
-                                _updateStatus(resa, false),
+                                : () => _updateStatus(resa, false),
                           ),
                         ],
                       )
@@ -378,7 +388,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
               ),
             ),
             const SizedBox(height: 20),
-            if (widget.role == "client")
+            if (widget.idRole == 2)
               ExpansionTile(
                 title: const Text(
                   "Nouvelle réservation",
@@ -390,34 +400,27 @@ class _ReservationsPageState extends State<ReservationsPage> {
                   ElevatedButton.icon(
                     icon: const Icon(Icons.calendar_today, color: Colors.white),
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent
-                    ),
+                        backgroundColor: Colors.redAccent),
                     label: Text(
                       _selectedDate == null
                           ? "Sélectionner une date"
                           : _formatDate(_selectedDate!),
-                      style: TextStyle(color: Colors.white),
+                      style: const TextStyle(color: Colors.white),
                     ),
                     onPressed: () => _pickDate(context),
                   ),
                   const SizedBox(height: 20),
                   if (_selectedDate != null)
                     _isLoadingSlots
-                        ? const Center(child: SizedBox(
-                                                  height: 10.0,
-                                                  width: 10.0,
-                                                  child: CircularProgressIndicator(
-                                                    color: Colors.white,
-                                                  ),
-                                                )
-                        )
+                        ? const Center(child: CircularProgressIndicator())
                         : _slots.isEmpty
-                        ? const Text("Aucun créneau disponible pour cette date.")
+                        ? const Text("Aucun créneau disponible.")
                         : Wrap(
                       spacing: 10,
                       runSpacing: 10,
                       children: _slots.map((slot) {
-                        final isSelected = _selectedSlot?.idSlot == slot.idSlot;
+                        final isSelected =
+                            _selectedSlot?.idSlot == slot.idSlot;
                         return ChoiceChip(
                           label: Text(slot.slotValue),
                           selected: isSelected,
@@ -474,16 +477,14 @@ class _ReservationsPageState extends State<ReservationsPage> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: _isSubmitting
-                          ? const SizedBox(
-                            height: 10.0,
-                            width: 10.0,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                            ),
-                          )
+                          ? const CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      )
                           : const Text(
                         "Confirmer la réservation",
-                        style: TextStyle(fontSize: 16, color: Colors.white),
+                        style: TextStyle(
+                            fontSize: 16, color: Colors.white),
                       ),
                     ),
                   ),

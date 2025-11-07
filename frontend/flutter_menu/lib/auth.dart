@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -10,7 +13,6 @@ class AuthPage extends StatefulWidget {
 class _AuthPageState extends State<AuthPage> {
   bool isLogin = true;
   final _formKey = GlobalKey<FormState>();
-
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _pseudoController = TextEditingController();
@@ -33,24 +35,55 @@ class _AuthPageState extends State<AuthPage> {
       _errorMessage = null;
     });
 
-    await Future.delayed(const Duration(seconds: 1)); // Simule un délai réseau
-
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
+    final pseudo = _pseudoController.text.trim();
 
-    // Simule un utilisateur existant (à remplacer par appel API)
-    if (isLogin) {
-      if (email == "client@peppe.com" && password == "1234") {
-        Navigator.pop(context, true); // Retourne "true" à MainPage
+    final String baseUrl = "http://localhost:8000";
+
+    try {
+      final url = Uri.parse(isLogin
+          ? "$baseUrl/user/login"
+          : "$baseUrl/user/register");
+
+      final body = isLogin
+          ? {"email": email, "password": password}
+          : {"pseudo": pseudo, "email": email, "password": password};
+
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+
+        if (isLogin) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString("access_token", data["access_token"]);
+          await prefs.setInt("idUser", data["user"]["idUser"]);
+          await prefs.setString("pseudo", data["user"]["pseudo"]);
+          await prefs.setString("email", data["user"]["email"]);
+          await prefs.setInt("idRole", data["user"]["idRole"]);
+
+          Navigator.pop(context, true); // signal succès
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Inscription réussie ! Vous pouvez vous connecter.")),
+          );
+          setState(() => isLogin = true);
+        }
       } else {
-        setState(() => _errorMessage = "Identifiants invalides");
+        final errorData = jsonDecode(response.body);
+        setState(() => _errorMessage =
+            errorData["detail"] ?? "Erreur ${response.statusCode}");
       }
-    } else {
-      // Simule une inscription réussie
-      Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => _errorMessage = "Erreur de connexion : $e");
+    } finally {
+      setState(() => _isLoading = false);
     }
-
-    setState(() => _isLoading = false);
   }
 
   @override
@@ -89,7 +122,6 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Champ pseudo visible uniquement à l'inscription
                       if (!isLogin)
                         TextFormField(
                           controller: _pseudoController,
@@ -110,7 +142,6 @@ class _AuthPageState extends State<AuthPage> {
 
                       if (!isLogin) const SizedBox(height: 15),
 
-                      // Email
                       TextFormField(
                         controller: _emailController,
                         decoration: const InputDecoration(
@@ -118,22 +149,19 @@ class _AuthPageState extends State<AuthPage> {
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
-                          RegExp regExp = new RegExp(
-                            r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
-                            caseSensitive: false,
-                            multiLine: false,
-                          );
+                          final regex = RegExp(
+                              r"^[\w\.-]+@[\w\.-]+\.\w+$");
                           if (value == null || value.isEmpty) {
                             return "Veuillez entrer votre email";
                           }
-                          if (!regExp.hasMatch(value)) {
+                          if (!regex.hasMatch(value)) {
                             return "Email invalide";
                           }
+                          return null;
                         },
                       ),
                       const SizedBox(height: 15),
 
-                      // Mot de passe
                       TextFormField(
                         controller: _passwordController,
                         decoration: const InputDecoration(
@@ -145,15 +173,14 @@ class _AuthPageState extends State<AuthPage> {
                           if (value == null || value.isEmpty) {
                             return "Veuillez entrer un mot de passe";
                           }
-                          if (value.length < 4) {
-                            return "Minimum 4 caractères";
+                          if (value.length < 3) {
+                            return "Minimum 3 caractères";
                           }
                           return null;
                         },
                       ),
                       const SizedBox(height: 20),
 
-                      // Message d’erreur
                       if (_errorMessage != null)
                         Text(
                           _errorMessage!,
@@ -162,26 +189,26 @@ class _AuthPageState extends State<AuthPage> {
 
                       const SizedBox(height: 20),
 
-                      // Bouton de connexion / inscription
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.redAccent
+                            backgroundColor: Colors.redAccent,
                           ),
                           onPressed: _isLoading ? null : _submitForm,
                           child: _isLoading
-                              ? SizedBox(
-                                  height: 10.0,
-                                  width: 10.0,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                  ),
-                                )
+                              ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
                               : Text(
-                                  isLogin ? "Se connecter" : "S’inscrire",
-                                  style: TextStyle(color: Colors.white),
-                                ),
+                            isLogin ? "Se connecter" : "S’inscrire",
+                            style: const TextStyle(color: Colors.white),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),
