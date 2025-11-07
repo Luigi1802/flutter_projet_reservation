@@ -101,6 +101,9 @@ class _AuthPageState extends State<AuthPage> {
                             if (value == null || value.isEmpty) {
                               return "Veuillez entrer un pseudo";
                             }
+                            if (value.length < 2) {
+                              return "Minimum 2 caractères";
+                            }
                             return null;
                           },
                         ),
@@ -115,13 +118,17 @@ class _AuthPageState extends State<AuthPage> {
                           border: OutlineInputBorder(),
                         ),
                         validator: (value) {
+                          RegExp regExp = new RegExp(
+                            r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
+                            caseSensitive: false,
+                            multiLine: false,
+                          );
                           if (value == null || value.isEmpty) {
                             return "Veuillez entrer votre email";
                           }
-                          if (!value.contains("@")) {
+                          if (!regExp.hasMatch(value)) {
                             return "Email invalide";
                           }
-                          return null;
                         },
                       ),
                       const SizedBox(height: 15),
