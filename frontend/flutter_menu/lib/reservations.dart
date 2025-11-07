@@ -4,11 +4,26 @@ import 'package:http/http.dart' as http;
 
 // --- Modèles ---
 class Slot {
-  final int id;
-  final String plageHoraire;
-  final String statut;
+  final int idSlot;
+  final String slotValue;
+  final bool available;
+  final int reservationCount;
 
-  Slot({required this.id, required this.plageHoraire, required this.statut});
+  Slot({
+    required this.idSlot,
+    required this.slotValue,
+    required this.available,
+    required this.reservationCount,
+  });
+
+  factory Slot.fromJson(Map<String, dynamic> json) {
+    return Slot(
+      idSlot: json['idSlot'],
+      slotValue: json['slotValue'],
+      available: json['available'],
+      reservationCount: json['reservationCount'],
+    );
+  }
 }
 
 class Reservation {
@@ -31,7 +46,6 @@ class Reservation {
   });
 
   factory Reservation.fromJson(Map<String, dynamic> json) {
-    // Convertir date "yyyy-MM-dd" -> "dd/MM/yyyy"
     final dateParts = (json['dateReservation'] as String).split('-');
     final formattedDate =
         "${dateParts[2]}/${dateParts[1]}/${dateParts[0]}";
@@ -67,6 +81,7 @@ class ReservationsPage extends StatefulWidget {
 
 class _ReservationsPageState extends State<ReservationsPage> {
   List<Reservation> _allReservations = [];
+  List<Slot> _slots = [];
 
   // Création d'une réservation
   DateTime? _selectedDate;
@@ -76,7 +91,6 @@ class _ReservationsPageState extends State<ReservationsPage> {
   bool _isLoadingSlots = false;
   bool _isSubmitting = false;
   bool _isLoadingReservations = true;
-  List<Slot> _slots = [];
 
   @override
   void initState() {
@@ -84,6 +98,37 @@ class _ReservationsPageState extends State<ReservationsPage> {
     _fetchReservations();
   }
 
+  // --- Fonction pour obtenir l'icône du statut ---
+  Icon _buildStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'confirmée':
+        return const Icon(Icons.check_circle, color: Colors.green, size: 18);
+      case 'refusé':
+        return const Icon(Icons.cancel, color: Colors.red, size: 18);
+      case 'annulée':
+        return const Icon(Icons.cancel, color: Colors.red, size: 18);
+      case 'en attente':
+      default:
+        return const Icon(Icons.access_time, color: Colors.orange, size: 18);
+    }
+  }
+
+  // --- Fonction pour la couleur du texte du statut ---
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'confirmée':
+        return Colors.green;
+      case 'refusé':
+        return Colors.red;
+      case 'annulée':
+        return Colors.red;
+      case 'en attente':
+      default:
+        return Colors.orange;
+    }
+  }
+
+  // --- Récupérer les réservations ---
   Future<void> _fetchReservations() async {
     setState(() => _isLoadingReservations = true);
 
@@ -94,13 +139,10 @@ class _ReservationsPageState extends State<ReservationsPage> {
           ? Uri.parse("$baseUrl/reservation/getAll")
           : Uri.parse("$baseUrl/reservation/getAll/${widget.clientId}");
 
-      final response = await http.get(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          // 'Authorization': 'Bearer ...'
-        },
-      );
+      final response = await http.get(url, headers: {
+        'Content-Type': 'application/json',
+      });
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List reservationsJson = data['reservations'] ?? [];
@@ -116,7 +158,6 @@ class _ReservationsPageState extends State<ReservationsPage> {
         );
       }
     } catch (e) {
-      // Ceci capture le "Failed to fetch" côté web ou les erreurs de réseau côté mobile
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text(
@@ -127,49 +168,113 @@ class _ReservationsPageState extends State<ReservationsPage> {
     }
   }
 
+  // --- Récupérer les créneaux ---
+  Future<void> _fetchSlots(String dateKey) async {
+    setState(() => _isLoadingSlots = true);
+    try {
+      final url = Uri.parse("http://localhost:8000/planning/reservations/$dateKey");
+      final response = await http.get(url, headers: {'Content-Type': 'application/json'});
 
-  // Simule la réponse de l'API pour les créneaux
-  Future<List<Slot>> _fetchSlots(String dateKey) async {
-    await Future.delayed(const Duration(seconds: 1));
-    final data = {
-      '2025-11-07': [
-        Slot(id: 1, plageHoraire: '12:00 - 12:30', statut: 'disponible'),
-        Slot(id: 2, plageHoraire: '12:30 - 13:00', statut: 'occupé'),
-        Slot(id: 3, plageHoraire: '13:00 - 13:30', statut: 'disponible'),
-        Slot(id: 4, plageHoraire: '18:00 - 18:30', statut: 'disponible'),
-      ],
-      '2025-11-08': [
-        Slot(id: 5, plageHoraire: '11:30 - 12:00', statut: 'occupé'),
-        Slot(id: 6, plageHoraire: '12:00 - 12:30', statut: 'disponible'),
-        Slot(id: 7, plageHoraire: '14:00 - 14:30', statut: 'disponible'),
-      ],
-    };
-    return data[dateKey] ?? [];
-  }
-
-  List<Reservation> get _reservationsFiltered {
-    if (widget.role == "client") {
-      return _allReservations
-          .where((r) => r.pseudo == widget.clientName)
-          .toList();
-    } else {
-      return _allReservations;
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List slotsJson = data['slots'] ?? [];
+        setState(() {
+          _slots = slotsJson.map((json) => Slot.fromJson(json)).toList();
+          _selectedSlot = null;
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur ${response.statusCode} lors de la récupération des créneaux.")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erreur lors de la récupération des créneaux: $e")),
+      );
+    } finally {
+      setState(() => _isLoadingSlots = false);
     }
   }
 
-  Future<void> _updateStatus(Reservation resa, String newStatus) async {
+  // --- Mettre à jour le statut d'une réservation ---
+  Future<void> _updateStatus(Reservation resa, bool confirm) async {
     setState(() => _isSubmitting = true);
+
     try {
-      // Appel API possible pour mettre à jour le statut ici
-      await Future.delayed(const Duration(seconds: 1));
-      setState(() {
-        resa.status = newStatus;
+      final url = Uri.parse("http://localhost:8000/reservation/manage");
+      final body = json.encode({
+        "idResa": resa.idResa,
+        "confirm": confirm,
       });
+
+      final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: body);
+
+      if (response.statusCode == 200) {
+        await _fetchReservations();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur ${response.statusCode} lors de la mise à jour.")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erreur lors de la mise à jour: $e")),
+      );
     } finally {
       setState(() => _isSubmitting = false);
     }
   }
 
+  // --- Créer une réservation ---
+  Future<void> _confirmReservation() async {
+    if (_selectedDate == null || _selectedSlot == null) return;
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      final url = Uri.parse("http://localhost:8000/planning/book");
+      final body = json.encode({
+        "dateReservation": "${_selectedDate!.year.toString().padLeft(4,'0')}-"
+            "${_selectedDate!.month.toString().padLeft(2,'0')}-"
+            "${_selectedDate!.day.toString().padLeft(2,'0')}",
+        "idSlot": _selectedSlot!.idSlot,
+        "nbPers": _guests,
+        "message": _noteController.text,
+        "idUser": widget.clientId,
+      });
+
+      final response = await http.post(url,
+          headers: {'Content-Type': 'application/json'}, body: body);
+
+      if (response.statusCode == 201) {
+        await _fetchReservations();
+
+        setState(() {
+          _selectedDate = null;
+          _selectedSlot = null;
+          _guests = 2;
+          _noteController.clear();
+          _slots = [];
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Réservation créée avec succès !")),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur ${response.statusCode} lors de la création de la réservation.")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erreur lors de la création de la réservation: $e")),
+      );
+    } finally {
+      setState(() => _isSubmitting = false);
+    }
+  }
+
+  // --- Sélection de la date ---
   Future<void> _pickDate(BuildContext context) async {
     final DateTime now = DateTime.now();
     final DateTime? picked = await showDatePicker(
@@ -180,68 +285,27 @@ class _ReservationsPageState extends State<ReservationsPage> {
     );
 
     if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-        _selectedSlot = null;
-        _isLoadingSlots = true;
-      });
-
-      final key =
-          "${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
-
-      final slots = await _fetchSlots(key);
-
-      setState(() {
-        _slots = slots;
-        _isLoadingSlots = false;
-      });
+      setState(() => _selectedDate = picked);
+      final key = "${picked.year.toString().padLeft(4,'0')}-"
+          "${picked.month.toString().padLeft(2,'0')}-"
+          "${picked.day.toString().padLeft(2,'0')}";
+      await _fetchSlots(key);
     }
   }
 
-  String _formatDate(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    final year = date.year.toString();
-    return "$day/$month/$year";
-  }
+  String _formatDate(DateTime date) =>
+      "${date.day.toString().padLeft(2,'0')}/${date.month.toString().padLeft(2,'0')}/${date.year}";
 
-  Future<void> _confirmReservation() async {
-    if (_selectedDate == null || _selectedSlot == null) return;
-
-    setState(() => _isSubmitting = true);
-    await Future.delayed(const Duration(seconds: 1));
-
-    final newResa = Reservation(
-      idResa: _allReservations.length + 1,
-      dateReservation: _formatDate(_selectedDate!),
-      slotValue: _selectedSlot!.plageHoraire,
-      nbPers: _guests,
-      status: "En attente",
-      message: _noteController.text,
-      pseudo: widget.clientName,
-    );
-
-    setState(() {
-      _allReservations.add(newResa);
-      _selectedDate = null;
-      _selectedSlot = null;
-      _guests = 2;
-      _noteController.clear();
-      _slots = [];
-      _isSubmitting = false;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Réservation créée avec succès !")),
-    );
-  }
+  List<Reservation> get _reservationsFiltered => _allReservations;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Mes réservations"),
+        centerTitle: true,
         backgroundColor: Colors.redAccent,
+        foregroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -268,7 +332,20 @@ class _ReservationsPageState extends State<ReservationsPage> {
                             Text("Client : ${resa.pseudo}"),
                           if (resa.message.isNotEmpty)
                             Text("Note : ${resa.message}"),
-                          Text("Statut : ${resa.status}"),
+                            SizedBox(height: 6),
+                          Row(
+                            children: [
+                              _buildStatusIcon(resa.status),
+                              const SizedBox(width: 6),
+                              Text(
+                                resa.status,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: _statusColor(resa.status),
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                       trailing: widget.role == "hote" &&
@@ -282,7 +359,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
                             onPressed: _isSubmitting
                                 ? null
                                 : () =>
-                                _updateStatus(resa, "Confirmée"),
+                                _updateStatus(resa, true),
                           ),
                           IconButton(
                             icon: const Icon(Icons.close,
@@ -290,7 +367,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
                             onPressed: _isSubmitting
                                 ? null
                                 : () =>
-                                _updateStatus(resa, "Annulée"),
+                                _updateStatus(resa, false),
                           ),
                         ],
                       )
@@ -300,55 +377,67 @@ class _ReservationsPageState extends State<ReservationsPage> {
                 },
               ),
             ),
-
-            if (widget.role == "client") ExpansionTile(
-              title: const Text(
-                "Nouvelle réservation",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              initiallyExpanded: true,
-              children: [
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.calendar_today),
-                  label: Text(
-                    _selectedDate == null
-                        ? "Sélectionner une date"
-                        : _formatDate(_selectedDate!),
-                  ),
-                  onPressed: () => _pickDate(context),
+            const SizedBox(height: 20),
+            if (widget.role == "client")
+              ExpansionTile(
+                title: const Text(
+                  "Nouvelle réservation",
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 10),
-                if (_selectedDate != null) ...[
-                  _isLoadingSlots
-                      ? const Center(child: CircularProgressIndicator())
-                      : _slots.isEmpty
-                      ? const Text("Aucun créneau disponible pour cette date.")
-                      : Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: _slots.map((slot) {
-                      final isSelected = _selectedSlot?.id == slot.id;
-                      final isAvailable = slot.statut.toLowerCase() == 'disponible';
-                      return ChoiceChip(
-                        label: Text(slot.plageHoraire),
-                        selected: isSelected,
-                        onSelected: isAvailable
-                            ? (_) {
-                          setState(() {
-                            _selectedSlot = slot;
-                          });
-                        }
-                            : null,
-                        backgroundColor: isAvailable
-                            ? Colors.grey[200]
-                            : Colors.grey[400],
-                        selectedColor: Colors.redAccent,
-                      );
-                    }).toList(),
+                initiallyExpanded: true,
+                children: [
+                  const SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.calendar_today, color: Colors.white),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent
+                    ),
+                    label: Text(
+                      _selectedDate == null
+                          ? "Sélectionner une date"
+                          : _formatDate(_selectedDate!),
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onPressed: () => _pickDate(context),
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 20),
+                  if (_selectedDate != null)
+                    _isLoadingSlots
+                        ? const Center(child: SizedBox(
+                                                  height: 10.0,
+                                                  width: 10.0,
+                                                  child: CircularProgressIndicator(
+                                                    color: Colors.white,
+                                                  ),
+                                                )
+                        )
+                        : _slots.isEmpty
+                        ? const Text("Aucun créneau disponible pour cette date.")
+                        : Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: _slots.map((slot) {
+                        final isSelected = _selectedSlot?.idSlot == slot.idSlot;
+                        return ChoiceChip(
+                          label: Text(slot.slotValue),
+                          selected: isSelected,
+                          onSelected: slot.available
+                              ? (_) {
+                            setState(() {
+                              _selectedSlot = slot;
+                            });
+                          }
+                              : null,
+                          backgroundColor: slot.available
+                              ? Colors.grey[200]
+                              : Colors.grey[400],
+                          selectedColor: Colors.redAccent,
+                        );
+                      }).toList(),
+                    ),
+                  const SizedBox(height: 20),
                   const Text(
-                    "Nombre de convives",
+                    "Nombre de couverts",
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   DropdownButton<int>(
@@ -360,9 +449,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
                         child: Text("${i + 1}"),
                       ),
                     ),
-                    onChanged: (val) {
-                      setState(() => _guests = val ?? 2);
-                    },
+                    onChanged: (val) => setState(() => _guests = val ?? 2),
                   ),
                   const SizedBox(height: 10),
                   TextField(
@@ -373,7 +460,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
                     ),
                     maxLines: 2,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -387,16 +474,22 @@ class _ReservationsPageState extends State<ReservationsPage> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: _isSubmitting
-                          ? const CircularProgressIndicator(color: Colors.white)
+                          ? const SizedBox(
+                            height: 10.0,
+                            width: 10.0,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
+                          )
                           : const Text(
                         "Confirmer la réservation",
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
                     ),
                   ),
+                  const SizedBox(height: 20),
                 ],
-              ],
-            ),
+              ),
           ],
         ),
       ),

@@ -41,6 +41,9 @@ class _MainPageState extends State<MainPage> {
             child: const Text("Annuler"),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent
+            ),
             onPressed: () {
               Navigator.pop(context);
               Navigator.push(
@@ -56,7 +59,7 @@ class _MainPageState extends State<MainPage> {
                 }
               });
             },
-            child: const Text("Se connecter"),
+            child: const Text("Se connecter", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
