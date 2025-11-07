@@ -27,3 +27,7 @@ exemple: pour l'utilisateur **clientA** avec le mot de passe **aaa**, la valeur 
 
 Démarrer l'API
 depuis la racine du projet: ```uvicorn backend.main:app --reload```
+
+### Documentation API
+
+http://localhost:8000/docs

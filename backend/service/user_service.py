@@ -3,6 +3,7 @@ from ..model.user import User
 from ..model.role import Role
 from ..schema.schema import UserRegister
 from passlib.context import CryptContext
+from ..auth import create_access_token
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -15,6 +16,17 @@ class UserService:
         if user.passwordUser != password:  # Temporaire - à remplacer par hash
             return None
         return user
+
+    @staticmethod
+    def create_access_token_for_user(user: User):
+        """Créer un token JWT pour un utilisateur"""
+        token_data = {
+            "sub": str(user.idUser),
+            "role_id": user.idRole,
+            "email": user.email
+        }
+        access_token = create_access_token(data=token_data)
+        return access_token
 
     @staticmethod
     def create_user(db: Session, user_data: UserRegister):

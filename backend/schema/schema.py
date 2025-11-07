@@ -21,6 +21,12 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class LoginResponse(BaseModel):
+    message: str
+    access_token: str
+    token_type: str
+    user: dict
+
 class SlotAvailability(BaseModel):
     idSlot: int
     slotValue: str

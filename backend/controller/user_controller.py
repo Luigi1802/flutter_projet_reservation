@@ -11,8 +11,11 @@ class UserController:
         if not user:
             raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
 
+        access_token = UserService.create_access_token_for_user(user)
+
         return {
             "message": "Connexion réussie",
+            "access_token": access_token,
             "user": {
                 "idUser": user.idUser,
                 "pseudo": user.pseudo,
