@@ -74,7 +74,7 @@ class _MainPageState extends State<MainPage> {
         },
       ),
       const MenuPage(),
-      const ReservationsPage(role: "client", clientName: "luigi"),
+      const ReservationsPage(role: "client", clientName: "luigi", clientId: 2),
     ];
     return Scaffold(
       body: _pages[_selectedIndex],

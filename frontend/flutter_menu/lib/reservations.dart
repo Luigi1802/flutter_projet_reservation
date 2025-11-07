@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 // --- Modèles ---
 class Slot {
@@ -11,33 +13,52 @@ class Slot {
 
 class Reservation {
   final int idResa;
-  final String date; // "dd/MM/yyyy"
-  final String creneau;
+  final String dateReservation; // "dd/MM/yyyy"
+  final String slotValue;
   final int nbPers;
-  String statut; // "en attente", "validée", "refusée"
+  String status; // "En attente", "Confirmée", "Annulée"
   final String message;
-  final String clientName;
+  final String pseudo;
 
   Reservation({
     required this.idResa,
-    required this.date,
-    required this.creneau,
+    required this.dateReservation,
+    required this.slotValue,
     required this.nbPers,
-    required this.statut,
+    required this.status,
     required this.message,
-    required this.clientName,
+    required this.pseudo,
   });
+
+  factory Reservation.fromJson(Map<String, dynamic> json) {
+    // Convertir date "yyyy-MM-dd" -> "dd/MM/yyyy"
+    final dateParts = (json['dateReservation'] as String).split('-');
+    final formattedDate =
+        "${dateParts[2]}/${dateParts[1]}/${dateParts[0]}";
+
+    return Reservation(
+      idResa: json['idResa'],
+      dateReservation: formattedDate,
+      slotValue: json['slotValue'],
+      nbPers: json['nbPers'],
+      status: json['status'] ?? 'En attente',
+      message: json['message'] ?? '',
+      pseudo: json['pseudo'] ?? '',
+    );
+  }
 }
 
 // --- Page principale ---
 class ReservationsPage extends StatefulWidget {
   final String role; // "client" ou "hote"
   final String clientName;
+  final int clientId;
 
   const ReservationsPage({
     super.key,
     required this.role,
     required this.clientName,
+    required this.clientId,
   });
 
   @override
@@ -45,35 +66,7 @@ class ReservationsPage extends StatefulWidget {
 }
 
 class _ReservationsPageState extends State<ReservationsPage> {
-  List<Reservation> _allReservations = [
-    Reservation(
-      idResa: 1,
-      date: "07/11/2025",
-      creneau: "12:00 - 12:30",
-      nbPers: 2,
-      statut: "en attente",
-      message: "Table côté fenêtre",
-      clientName: "Alice",
-    ),
-    Reservation(
-      idResa: 2,
-      date: "07/11/2025",
-      creneau: "18:00 - 18:30",
-      nbPers: 4,
-      statut: "validée",
-      message: "",
-      clientName: "Bob",
-    ),
-    Reservation(
-      idResa: 3,
-      date: "08/11/2025",
-      creneau: "12:00 - 12:30",
-      nbPers: 3,
-      statut: "en attente",
-      message: "Anniversaire",
-      clientName: "Alice",
-    ),
-  ];
+  List<Reservation> _allReservations = [];
 
   // Création d'une réservation
   DateTime? _selectedDate;
@@ -82,7 +75,58 @@ class _ReservationsPageState extends State<ReservationsPage> {
   final TextEditingController _noteController = TextEditingController();
   bool _isLoadingSlots = false;
   bool _isSubmitting = false;
+  bool _isLoadingReservations = true;
   List<Slot> _slots = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchReservations();
+  }
+
+  Future<void> _fetchReservations() async {
+    setState(() => _isLoadingReservations = true);
+
+    try {
+      String baseUrl = "http://localhost:8000";
+
+      final url = widget.role == "hote"
+          ? Uri.parse("$baseUrl/reservation/getAll")
+          : Uri.parse("$baseUrl/reservation/getAll/${widget.clientId}");
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          // 'Authorization': 'Bearer ...'
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List reservationsJson = data['reservations'] ?? [];
+        setState(() {
+          _allReservations =
+              reservationsJson.map((json) => Reservation.fromJson(json)).toList();
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  "Erreur ${response.statusCode} lors de la récupération des réservations.")),
+        );
+      }
+    } catch (e) {
+      // Ceci capture le "Failed to fetch" côté web ou les erreurs de réseau côté mobile
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                "Erreur lors de la récupération des réservations: $e\n")),
+      );
+    } finally {
+      setState(() => _isLoadingReservations = false);
+    }
+  }
+
 
   // Simule la réponse de l'API pour les créneaux
   Future<List<Slot>> _fetchSlots(String dateKey) async {
@@ -103,11 +147,10 @@ class _ReservationsPageState extends State<ReservationsPage> {
     return data[dateKey] ?? [];
   }
 
-  // Filtrage des réservations selon le rôle
   List<Reservation> get _reservationsFiltered {
     if (widget.role == "client") {
       return _allReservations
-          .where((r) => r.clientName == widget.clientName)
+          .where((r) => r.pseudo == widget.clientName)
           .toList();
     } else {
       return _allReservations;
@@ -116,11 +159,15 @@ class _ReservationsPageState extends State<ReservationsPage> {
 
   Future<void> _updateStatus(Reservation resa, String newStatus) async {
     setState(() => _isSubmitting = true);
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() {
-      resa.statut = newStatus;
-      _isSubmitting = false;
-    });
+    try {
+      // Appel API possible pour mettre à jour le statut ici
+      await Future.delayed(const Duration(seconds: 1));
+      setState(() {
+        resa.status = newStatus;
+      });
+    } finally {
+      setState(() => _isSubmitting = false);
+    }
   }
 
   Future<void> _pickDate(BuildContext context) async {
@@ -166,12 +213,12 @@ class _ReservationsPageState extends State<ReservationsPage> {
 
     final newResa = Reservation(
       idResa: _allReservations.length + 1,
-      date: _formatDate(_selectedDate!),
-      creneau: _selectedSlot!.plageHoraire,
+      dateReservation: _formatDate(_selectedDate!),
+      slotValue: _selectedSlot!.plageHoraire,
       nbPers: _guests,
-      statut: "en attente",
+      status: "En attente",
       message: _noteController.text,
-      clientName: widget.clientName,
+      pseudo: widget.clientName,
     );
 
     setState(() {
@@ -200,8 +247,9 @@ class _ReservationsPageState extends State<ReservationsPage> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // --- Liste des réservations ---
-            Expanded(
+            _isLoadingReservations
+                ? const Center(child: CircularProgressIndicator())
+                : Expanded(
               child: _reservationsFiltered.isEmpty
                   ? const Center(child: Text("Aucune réservation."))
                   : ListView.builder(
@@ -212,19 +260,19 @@ class _ReservationsPageState extends State<ReservationsPage> {
                     margin: const EdgeInsets.symmetric(vertical: 5),
                     child: ListTile(
                       title: Text(
-                          "${resa.date} - ${resa.creneau} (${resa.nbPers} pers)"),
+                          "${resa.dateReservation} - ${resa.slotValue} (${resa.nbPers} pers)"),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (widget.role == "hote")
-                            Text("Client : ${resa.clientName}"),
+                            Text("Client : ${resa.pseudo}"),
                           if (resa.message.isNotEmpty)
                             Text("Note : ${resa.message}"),
-                          Text("Statut : ${resa.statut}"),
+                          Text("Statut : ${resa.status}"),
                         ],
                       ),
                       trailing: widget.role == "hote" &&
-                          resa.statut == "en attente"
+                          resa.status.toLowerCase() == "en attente"
                           ? Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -234,7 +282,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
                             onPressed: _isSubmitting
                                 ? null
                                 : () =>
-                                _updateStatus(resa, "validée"),
+                                _updateStatus(resa, "Confirmée"),
                           ),
                           IconButton(
                             icon: const Icon(Icons.close,
@@ -242,7 +290,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
                             onPressed: _isSubmitting
                                 ? null
                                 : () =>
-                                _updateStatus(resa, "refusée"),
+                                _updateStatus(resa, "Annulée"),
                           ),
                         ],
                       )
@@ -253,7 +301,6 @@ class _ReservationsPageState extends State<ReservationsPage> {
               ),
             ),
 
-            // --- Création d'une réservation ---
             if (widget.role == "client") ExpansionTile(
               title: const Text(
                 "Nouvelle réservation",
@@ -281,7 +328,7 @@ class _ReservationsPageState extends State<ReservationsPage> {
                     runSpacing: 10,
                     children: _slots.map((slot) {
                       final isSelected = _selectedSlot?.id == slot.id;
-                      final isAvailable = slot.statut == 'disponible';
+                      final isAvailable = slot.statut.toLowerCase() == 'disponible';
                       return ChoiceChip(
                         label: Text(slot.plageHoraire),
                         selected: isSelected,

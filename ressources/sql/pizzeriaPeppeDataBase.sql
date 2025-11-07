@@ -1,7 +1,7 @@
 -- Création de la DB et jeu de données initial
 
 -- Création du schéma
-CREATE DATABASE  IF NOT EXISTS `pizzeriapeppe` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+CREATE DATABASE  IF NOT EXISTS `pizzeriapeppe`;
 
 -- Sélection du schéma
 USE pizzeriapeppe;
@@ -84,6 +84,6 @@ INSERT INTO user (pseudo, email, passwordUser, idRole) VALUES
 INSERT INTO reservation (dateReservation, idSlot, nbPers, idStatus, message, idUser) VALUES
 ('2025-11-07', 1, 2, 1, 'Table près de la fenêtre si possible.', 2),
 ('2025-11-07', 3, 4, 2, 'Anniversaire', 3),
-('2025-11-08', 2, 3, 1, NULL, 4),
+('2025-11-08', 2, 3, 1, NULL, 2),
 ('2025-11-08', 5, 5, 2, 'Besoin d’une grande table.', 3),
-('2025-11-09', 4, 2, 3, 'Annulée par le client.', 4);
+('2025-11-09', 4, 2, 3, 'Annulée par le client.', 3);
