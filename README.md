@@ -20,7 +20,7 @@ Installer les packages
 ```pip install fastapi uvicorn sqlalchemy pymysql python-multipart passlib[bcrypt] pydantic[email]```
 
 Requirements.txt
-```pip install -r requirements.txt```
+depuis le dossier backend: ```pip install -r requirements.txt```
 
 ### Démarrage
 
@@ -29,4 +29,4 @@ Windows: ```.venv\Scripts\Activate.ps1```
 Linux: ```source .venv/bin/activate```
 
 Démarrer l'API
-```fastapi dev main.py```
+depuis la racine du projet: ```uvicorn backend.main:app --reload  ```
