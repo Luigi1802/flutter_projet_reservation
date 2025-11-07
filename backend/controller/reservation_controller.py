@@ -5,16 +5,19 @@ from ..schema.schema import ConfirmReservationRequest
 from ..service.reservation_service import ReservationService
 
 class ReservationController:
+    # obtenir les reservations associées à un utilisateur
     @staticmethod
     def get_user_reservations(user_id: int, db: Session = Depends(get_db)):
         reservations = ReservationService.get_user_reservations(db, user_id)
         return {"reservations": reservations}
 
+    # obtenir toutes les réservations (administrateur only)
     @staticmethod
     def get_all_reservations(db: Session = Depends(get_db)):
         reservations = ReservationService.get_all_reservations(db)
         return {"reservations": reservations}
 
+    # accepter ou refuser une réservation
     @staticmethod
     def confirm_reservation(request: ConfirmReservationRequest, db: Session = Depends(get_db)):
         try:

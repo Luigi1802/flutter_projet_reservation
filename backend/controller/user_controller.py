@@ -5,6 +5,7 @@ from ..schema.schema import UserLogin, UserRegister, UserResponse
 from ..service.user_service import UserService
 
 class UserController:
+    # se connecter
     @staticmethod
     def login(credentials: UserLogin, db: Session = Depends(get_db)):
         user = UserService.authenticate_user(db, credentials.email, credentials.password)
@@ -25,6 +26,7 @@ class UserController:
             }
         }
 
+    # s'inscrire
     @staticmethod
     def register(user_data: UserRegister, db: Session = Depends(get_db)):
         try:

@@ -4,13 +4,12 @@ from backend.router import user_router, planning_router, reservation_router
 
 app = FastAPI(title="Pizzeria Peppe API", version="1.0.0")
 
-# Autoriser toutes les origines
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # toutes les origines
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # GET, POST, PUT, DELETE, OPTIONS…
-    allow_headers=["*"],  # Content-Type, Authorization, etc.
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Inclure les routers

@@ -13,7 +13,7 @@ def get_user_reservations(
         db: Session = Depends(get_db),
         current_user: dict = Depends(get_current_user)
 ):
-    # Un utilisateur ne peut voir que ses propres réservations, sauf admin
+    # Un utilisateur ne peut voir que ses propres réservations
     if current_user["role_id"] != 1 and int(current_user["user_id"]) != userId:
         from fastapi import HTTPException
         raise HTTPException(

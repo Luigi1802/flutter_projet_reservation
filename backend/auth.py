@@ -14,7 +14,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 heures
 security = HTTPBearer()
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    """Créer un token JWT"""
+    #Créer un token JWT
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -26,7 +26,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 def verify_token(token: str):
-    """Vérifier et décoder un token JWT"""
+    #Vérifier et décoder un token JWT
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: int = payload.get("sub")
@@ -47,12 +47,10 @@ def verify_token(token: str):
         )
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Dépendance pour récupérer l'utilisateur actuel depuis le token"""
     token = credentials.credentials
     return verify_token(token)
 
 def require_admin(current_user: dict = Depends(get_current_user)):
-    """Dépendance pour vérifier que l'utilisateur est admin (role_id = 1)"""
     if current_user["role_id"] != 1:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

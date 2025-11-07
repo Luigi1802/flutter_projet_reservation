@@ -13,13 +13,13 @@ class UserService:
         user = db.query(User).filter(User.email == email).first()
         if not user:
             return None
-        if user.passwordUser != password:  # Temporaire - à remplacer par hash
+        if user.passwordUser != password:
             return None
         return user
 
     @staticmethod
     def create_access_token_for_user(user: User):
-        """Créer un token JWT pour un utilisateur"""
+        # Créer un token JWT pour un utilisateur
         token_data = {
             "sub": str(user.idUser),
             "role_id": user.idRole,
