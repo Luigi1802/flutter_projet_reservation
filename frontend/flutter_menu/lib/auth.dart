@@ -94,12 +94,12 @@ class _AuthPageState extends State<AuthPage> {
                         TextFormField(
                           controller: _pseudoController,
                           decoration: const InputDecoration(
-                            labelText: "Pseudo",
+                            labelText: "Nom / pseudonyme",
                             border: OutlineInputBorder(),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return "Veuillez entrer un pseudo";
+                              return "Veuillez entrer un nom / pseudo";
                             }
                             if (value.length < 2) {
                               return "Minimum 2 caractères";
@@ -166,22 +166,47 @@ class _AuthPageState extends State<AuthPage> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.redAccent
+                          ),
                           onPressed: _isLoading ? null : _submitForm,
                           child: _isLoading
-                              ? const CircularProgressIndicator(
-                            color: Colors.white,
-                          )
-                              : Text(isLogin ? "Se connecter" : "S’inscrire"),
+                              ? SizedBox(
+                                  height: 10.0,
+                                  width: 10.0,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Text(
+                                  isLogin ? "Se connecter" : "S’inscrire",
+                                  style: TextStyle(color: Colors.white),
+                                ),
                         ),
                       ),
                       const SizedBox(height: 10),
 
-                      // Changer de mode
                       TextButton(
                         onPressed: _toggleMode,
-                        child: Text(isLogin
-                            ? "Pas encore de compte ? S’inscrire"
-                            : "Déjà un compte ? Se connecter"),
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: isLogin
+                                    ? "Pas encore de compte ? "
+                                    : "Déjà un compte ? ",
+                                style: const TextStyle(color: Colors.black),
+                              ),
+                              TextSpan(
+                                text: isLogin ? "S’inscrire" : "Se connecter",
+                                style: const TextStyle(
+                                  color: Colors.redAccent,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
