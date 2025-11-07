@@ -12,8 +12,6 @@ depuis le dossier backend: ```pip install -r requirements.txt```
 
 Dans une instance mysql, exécutez le script de création **pizzeriaPeppeDataBase.sql**. Ce fichier se trouve dans **ressources>sql>pizzeriaPeppeDataBase.sql**
 
-
-
 ### Démarrage
 
 Démarrer l'API

@@ -1,0 +1,221 @@
+{
+	"info": {
+		"_postman_id": "d8522223-384b-4685-8ce2-654e7f7e53bc",
+		"name": "Pizzeria Peppe",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "27527112"
+	},
+	"item": [
+		{
+			"name": "reservation",
+			"item": [
+				{
+					"name": "getAll",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/reservation/getAll",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"reservation",
+								"getAll"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "getAll ByUser",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/reservation/getAll/2",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"reservation",
+								"getAll",
+								"2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "confirm",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"idResa\": 8,\r\n    \"confirm\": false\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}/reservation/manage",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"reservation",
+								"manage"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "planning",
+			"item": [
+				{
+					"name": "getAllSlotByDate",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/planning/reservations/2025-11-07",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"planning",
+								"reservations",
+								"2025-11-07"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "book",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"dateReservation\": \"2020-11-08\",\r\n    \"idSlot\": 1,\r\n    \"nbPers\": 3,\r\n    \"message\": \"ma pizza chef\",\r\n    \"idUser\": 2\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}/planning/book",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"planning",
+								"book"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "user",
+			"item": [
+				{
+					"name": "register",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"pseudo\": \"client4\",\r\n    \"email\": \"fff@fff.fr\",\r\n    \"password\": \"fff\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}/user/register",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"user",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email\": \"bbb@bbb.fr\",\r\n    \"password\": \"bbb\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseURL}}/user/login",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"user",
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "alive",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseURL}}",
+					"host": [
+						"{{baseURL}}"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "baseURL",
+			"value": "",
+			"type": "default"
+		},
+		{
+			"key": "baseURL",
+			"value": "",
+			"type": "default"
+		}
+	]
+}
