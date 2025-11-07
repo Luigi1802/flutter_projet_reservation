@@ -1,15 +1,13 @@
-from typing import Union
-
 from fastapi import FastAPI
+from backend.router import user_router, planning_router, reservation_router
 
-app = FastAPI()
+app = FastAPI(title="Pizzeria Peppe API", version="1.0.0")
 
+# Inclure les routers
+app.include_router(user_router.router)
+app.include_router(planning_router.router)
+app.include_router(reservation_router.router)
 
 @app.get("/")
 def read_root():
     return {"Pizzeria Peppe"}
-
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Union[str, None] = None):
-    return {"item_id": item_id, "q": q}

@@ -76,7 +76,7 @@ INSERT INTO slot (slotValue) VALUES
 
 -- Table User
 INSERT INTO user (pseudo, email, passwordUser, idRole) VALUES
-('admin', 'aaa@aaa.fr', 'aaa', 1)
+('admin', 'aaa@aaa.fr', 'aaa', 1),
 ('client2', 'ccc@ccc.fr', 'ccc', 2),
 ('client3', 'ddd@ddd.fr', 'ddd', 2);
 
